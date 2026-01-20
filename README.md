@@ -1,4 +1,10 @@
-# deepkrak3n (v3) — OSINT Profile Search and Analysis
+<p align="center">
+
+# deepkrak3n
+# OSINT Profile Search and Analysis
+
+</p>
+
 
 <p align="center">
   <a href="@guilhermelimait/deepkrak3n/files/deepkrak3nlogo.png" target="_blank">
@@ -7,6 +13,7 @@
 </p>
 
 ---
+<p align="center">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![OSINT](https://img.shields.io/badge/Topic-OSINT-critical)](https://osintframework.com/)
@@ -18,6 +25,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-3776ab?logo=python&logoColor=white)](https://www.python.org/)
 [![Main Contributor](https://img.shields.io/badge/Contributor-guilhermelimait-important)](https://github.com/guilhermelimait)
 [![Original Author](https://img.shields.io/badge/Original%20Author-danm-informational)](https://github.com/danm)
+</p>
 
 ---
 
