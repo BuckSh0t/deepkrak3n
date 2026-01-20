@@ -8,11 +8,16 @@
 
 ---
 
-[![Licence: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![OSINT](https://img.shields.io/badge/topic-OSINT-critical)](https://osintframework.com/)
-[![AI Powered](https://img.shields.io/badge/AI-power-green)](https://ollama.ai/)
-[![Main Contributor](https://img.shields.io/badge/contributor-guilhermelimait-important)](https://github.com/guilhermelimait)
-[![Original Author](https://img.shields.io/badge/original--author-danm](https://github.com/danm))
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![OSINT](https://img.shields.io/badge/Topic-OSINT-critical)](https://osintframework.com/)
+[![LLM Ready](https://img.shields.io/badge/LLM-Ollama%20%7C%20OpenAI-5b5b5b?logo=openai&logoColor=white)](https://ollama.ai/)
+[![Frontend](https://img.shields.io/badge/Frontend-Next.js-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![UI](https://img.shields.io/badge/UI-Tailwind%20CSS-38b2ac?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Language](https://img.shields.io/badge/Language-TypeScript-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776ab?logo=python&logoColor=white)](https://www.python.org/)
+[![Main Contributor](https://img.shields.io/badge/Contributor-guilhermelimait-important)](https://github.com/guilhermelimait)
+[![Original Author](https://img.shields.io/badge/Original%20Author-danm-informational)](https://github.com/danm)
 
 ---
 
@@ -99,20 +104,9 @@ deepkrak3n is a **fully local, modern OSINT platform** for scanning and analysin
 - **Modern Mindmapping:** New, intuitive interactive graph for visualizing results and overlaps.
 - **Full AI Integration:** LLM-based cross-profile persona analysis, smart key trait, and risk extraction.
 - **Performance:** Faster scanning/UI updates, less memory usage, improved concurrency.
-- **Privacy & Simplicity:** All proxy code removed (unlike earlier versions), simplified setup, no dependencies outside your system unless you enable optional LLM.
 - **Better Exports:** Exports now include full visuals and clean formatting for sharing, no PII or scan logs are stored.
 - **Customizable Everything:** Both platform list and analysis rules can be adjusted on-the-fly—no deeper changes required.
 - **Accessibility:** Improved keyboard controls and screen reader compatibility.
-
----
-
-## Recent UI updates (Jan 2026)
-
-- **Consistent phase CTAs:** All “Next phase” buttons share one size (240×42) and styling for predictable layout.
-- **Export CTA persistence:** The export button stays visible in the LLM header even when collapsed.
-- **Export panel polish:** Disclaimer text matches button size; green export buttons; aligned left text with right-aligned buttons; added top spacing and panel background/border.
-- **LLM controls layout:** Heuristic and LLM run buttons live inside their summaries; settings button sits beside the LLM run CTA; combined Heuristic+LLM runner available from Deep Analysis.
-- **Collapsible clarity:** Sections keep headers readable and action buttons accessible regardless of collapse state.
 
 ---
 
