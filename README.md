@@ -1,62 +1,151 @@
-# deepkrak3n (v3)
+# deepkrak3n (v3) — OSINT Profile Analyzer
 
 <p align="center">
-	<span style="display:inline-block; position:relative;">
-		<img src="./deepkrak3nlogo.png" alt="deepkrak3n logo" width="140" style="animation: logo-glitch 2.8s ease-in-out infinite 1s; border-radius: 12px;" />
-	</span>
+  <a href="@guilhermelimait/deepkrak3n/files/deepkrak3nlogo.png" target="_blank">
+    <img src="https://github.com/guilhermelimait/deepkrak3n/blob/main/deepkrak3nlogo.png" alt="deepkrak3n logo" width="180"/>
+  </a>
 </p>
 
-deepkrak3n is a local-first OSINT playground. Enter a username or email, scan 100+ public platforms, turn hits into profile cards, link identities on a mind map, run heuristic or LLM analysis, and export what you select.
+---
 
-## Features
-- Live availability scan over SSE across ~100 public platforms with per-site status.
-- Profile cards with display name, bio, avatar, category, and latency/proxy info.
-- Mind map linking by username, email, or profile name, with overlap controls.
-- Heuristic analysis plus optional LLM (Ollama or OpenAI-compatible) summary.
-- Export JSON or HTML preview; settings stored locally in the browser.
-- Proxy toggle/status surfaced in UI; backend handles proxy rotation and retries.
+[![Licence: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![OSINT](https://img.shields.io/badge/topic-OSINT-critical)](https://osintframework.com/)
+[![AI Powered](https://img.shields.io/badge/AI-power-green)](https://ollama.ai/)
+[![Main Contributor](https://img.shields.io/badge/contributor-guilhermelimait-important)](https://github.com/guilhermelimait)
+[![Original Author](https://img.shields.io/badge/original--author-danm](https://github.com/danm))
 
-## Architecture
-- Frontend: Next.js App Router; main flow in [app/page.tsx](app/page.tsx), layout/theming in [app/layout.tsx](app/layout.tsx), Tailwind config in [tailwind.config.ts](tailwind.config.ts). Platform catalog lives in [data/platforms.json](data/platforms.json).
-- Backend: FastAPI service in [backend/app/main.py](backend/app/main.py); username search in [backend/app/search_service.py](backend/app/search_service.py) with site definitions in [backend/app/sites_database.py](backend/app/sites_database.py); proxy pool in [backend/app/proxy_manager.py](backend/app/proxy_manager.py); heuristic/LLM analyzer in [backend/app/profile_analyzer.py](backend/app/profile_analyzer.py).
+---
 
-## Run locally
-Prereqs: Node 18+ and Python 3.11+.
+## 📖 Table of Contents
 
-Backend (FastAPI):
-```
-cd backend
-python -m venv .venv
-. .venv/Scripts/activate  # Windows
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
+1. [What is deepkrak3n?](#what-is-deepkrak3n)
+2. [Features & Methods](#features--methods)
+3. [Mindmapping & Visualization](#mindmapping--visualization)
+4. [Search Techniques](#search-techniques)
+5. [Improvements Over Original](#improvements-over-original)
+6. [How to Run](#how-to-run)
+7. [Configuration & Customization](#configuration--customization)
+8. [Troubleshooting](#troubleshooting)
+9. [Credits & License](#credits--license)
 
-Frontend (Next.js):
-```
-npm install
-npm run dev
-```
+---
 
-Open http://localhost:3000 and set `NEXT_PUBLIC_API_BASE` if your backend is not on the default http://localhost:8000.
+## What is deepkrak3n?
 
-## Configuration knobs
-- `NEXT_PUBLIC_API_BASE`: backend URL (used by the frontend).
-- LLM (local): run Ollama (default http://localhost:11434) and pull a model, e.g., `ollama pull smollm:latest`; click Connect to list models.
-- LLM (OpenAI-compatible): set API mode to `openai` in Settings and point to your compatible endpoint/key (proxied via your backend if needed).
-- Proxy envs (optional, backend): `PROXY_ENABLED`, `PROXY_LIST`, `PROXY_ROTATION_MODE`, `PROXY_MAX_RETRIES`, `PROXY_BACKOFF_BASE`, `PROXY_FAILURE_COOLDOWN_SECONDS`, `PROXY_ALLOW_DIRECT_FALLBACK`.
+deepkrak3n is a **fully local, modern OSINT platform** for scanning and analyzing public profiles across **200+ platforms** by username or email. It provides more than just a list: it builds relationships between accounts, leverages AI for summary and risk analysis, and gives you a clean, fast, and private user experience. Developed for educational and research purposes, it respects privacy and runs with no external data storage.
 
-## Customization
-- Platforms: edit [data/platforms.json](data/platforms.json) (category keys with `{ "name": "Site", "url": "https://site.com/{handle}" }`). Dev server hot-reloads; rebuild for production.
-- Analyzer prompt: update in Settings → Analyzer prompt; base logic in [backend/app/profile_analyzer.py](backend/app/profile_analyzer.py).
+---
 
-## Do not upload
-Everything in [DONOTUPLOAD](DONOTUPLOAD) is non-runtime and should stay out of version control: builds ([DONOTUPLOAD/.next](DONOTUPLOAD/.next), [DONOTUPLOAD/out](DONOTUPLOAD/out)), dependencies ([DONOTUPLOAD/node_modules](DONOTUPLOAD/node_modules)), backups ([DONOTUPLOAD/backup_20260117_114547](DONOTUPLOAD/backup_20260117_114547)), tooling caches ([DONOTUPLOAD/.bolt](DONOTUPLOAD/.bolt)), unused UI kit ([DONOTUPLOAD/components](DONOTUPLOAD/components), [DONOTUPLOAD/hooks/use-toast.ts](DONOTUPLOAD/hooks/use-toast.ts), [DONOTUPLOAD/lib/utils.ts](DONOTUPLOAD/lib/utils.ts)), helper scripts/docs ([DONOTUPLOAD/backend/scripts/fetch_proxies.py](DONOTUPLOAD/backend/scripts/fetch_proxies.py), [DONOTUPLOAD/components.json](DONOTUPLOAD/components.json), [DONOTUPLOAD/PROXY_ANON_PLAN.md](DONOTUPLOAD/PROXY_ANON_PLAN.md)).
+## Features & Methods
+
+- **Wide Coverage:** Scan 200+ social media, forums, code repositories, streaming sites, and more.
+- **Live Results:** Streaming scans show results as they are found—no need to wait for entire scan to finish.
+- **Smart Profile Cards:** Each hit includes display name, bio, avatar, real-time status, and summaries.
+- **AI/LLM Analysis:** Employs both classic heuristics and local/remote AI (Ollama, OpenAI, LLMs) for deep persona summaries, traits, and risk assessment.
+- **Export & Sharing:** Securely export your findings as JSON or standalone HTML for further investigations or reporting.
+- **Simple UX:** Minimalistic, modern interface (Next.js), dark mode, keyboard navigation, hot-reloading.
+- **Privacy First:** No cached history, no account registration, everything runs on your machine.
+- **Instant Filtering:** Results filter/search as you type, with highlight for risky/interesting hits.
+- **Customizable Database:** Easily add or refine platform patterns in a single data file.
+- **Batch Analysis:** Queue usernames/emails for multi-profile investigations.
+- **Open Extensibility:** Backend and frontend can be used independently or extended with your logic.
+
+---
+
+## Mindmapping & Visualization
+
+- **Relationship Mapping:** Links hits by username, email, or common profile features using interactive mindmaps.
+- **Graph View:** Quickly see how accounts on different services are likely connected.
+- **Overlap Analysis:** Highlights reused handles, similar emails, and related platform categories.
+- **Pivot Insights:** Click a node to pivot and run a new search, or expand for more details.
+
+---
+
+## Search Techniques
+
+- **Username & Email Scans:** Enter a handle or email. Results stream in as each platform is checked.
+- **Heuristics:** Platform-specific and global rules determine “interesting” profiles and flag possible risks.
+- **Pattern-matching:** Backend rapidly tests for presence, alternate spellings, name collisions, and more, using a unified platform regex DB.
+- **LLM Persona Analysis:** Summarize an online identity across platforms with the power of AI—offline (Ollama) or API-powered (OpenAI).
+- **Historical Hinting:** While no data is retained, you can manually compare export snapshots for changes over time.
+
+---
+
+## Improvements Over Original
+
+- **Platform Database Expansion:** More than *double* the original supported platforms.
+- **Modern Mindmapping:** New, intuitive interactive graph for visualizing results and overlaps.
+- **Full AI Integration:** LLM-based cross-profile persona analysis, smart key trait, and risk extraction.
+- **Performance:** Faster scanning/UI updates, less memory usage, improved concurrency.
+- **Privacy & Simplicity:** All proxy code removed (unlike earlier versions), simplified setup, no dependencies outside your system unless you enable optional LLM.
+- **Better Exports:** Exports now include full visuals and clean formatting for sharing, no PII or scan logs are stored.
+- **Customizable Everything:** Both platform list and analyzer rules can be adjusted on-the-fly—no deeper changes required.
+- **Accessibility:** Improved keyboard controls and screen reader compatibility.
+
+---
+
+## How to Run
+
+**Requirements:**  
+- Node.js v18+  
+- Python 3.11+  
+- (Optional for AI) Ollama or OpenAI-compatible key
+
+**Steps:**
+
+1. **Clone the Repo**
+   ```sh
+   git clone https://github.com/guilhermelimait/deepkrak3n.git
+   cd deepkrak3n
+   ```
+
+2. **Backend**
+   ```sh
+   cd backend
+   python -m venv .venv
+   # Windows: .venv\Scripts\activate
+   # macOS/Linux: source .venv/bin/activate
+   pip install -r requirements.txt
+   uvicorn app.main:app --host 0.0.0.0 --port 8000
+   ```
+
+3. **Frontend**
+   ```sh
+   cd ..
+   npm install
+   npm run dev
+   # Visit http://localhost:3000
+   ```
+
+**Tip:**  
+If your backend is not at `http://localhost:8000`, set env `NEXT_PUBLIC_API_BASE`.
+
+---
+
+## Configuration & Customization
+
+- **Add/Remove Platforms:** Edit [`data/platforms.json`](data/platforms.json).
+- **Switch AI Mode:** Ollama locally (`ollama pull smollm:latest`); OpenAI via API/key in settings.
+- **Customize Analyzer:** Change profile prompt logic in Settings.
+- **Themes & Layout:** Adjust via Tailwind config or settings panel.
+
+---
 
 ## Troubleshooting
-- Backend not responding: ensure uvicorn is running and `NEXT_PUBLIC_API_BASE` matches.
-- Ollama test fails: confirm Ollama is reachable and at least one model is pulled; use the Test Ollama button in Settings.
-- Empty results: platforms may throttle; retry with proxy on (if configured) or wait.
 
-## Educational note
-For educational OSINT only. Respect platform terms, rate limits, and privacy. Exports happen only when you choose to export.
+- Backend not responding? Check uvicorn/FastAPI is running and URL matches.
+- AI errors? Confirm Ollama API is reachable, or OpenAI key is set and correct.
+- Empty results or throttling? Some sites have aggressive rate limits—retry after a few minutes.
+
+---
+
+## Credits & License
+
+- **Main contributor:** [guilhermelimait](https://github.com/guilhermelimait)
+- **Original author:** [danm](https://github.com/danm)
+- Community contributors — thank you!
+- Open source under MIT License.
+
+> *Educational use only. Respect privacy and Terms of all platforms. Your exports remain private unless you share them.*
+
+---
