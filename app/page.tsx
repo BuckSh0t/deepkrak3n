@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { ChevronDown, Settings, Zap, RefreshCcw, Play, Download, Save, FileText, CheckCircle, X, Eye, ArrowUp } from "lucide-react";
@@ -190,7 +191,12 @@ export default function Home() {
   const searchStreamRef = useRef<EventSource | null>(null);
   const [showConnections, setShowConnections] = useState(true);
   const [connectBy, setConnectBy] = useState<"username" | "email" | "profile">("username");
+  const [branchMode, setBranchMode] = useState<"all" | "single-pack" | "sorted">("sorted");
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [mapPan, setMapPan] = useState({ x: 0, y: 0 });
+  const panStateRef = useRef({ dragging: false, startX: 0, startY: 0, origX: 0, origY: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [activeBranch, setActiveBranch] = useState<{ label: string; nodes: DeepProfileResult[]; basis?: { type: string; value: string; note: string } } | null>(null);
 
   const isSearchInProgress = useMemo(() => isChecking || phases.availability === "running", [isChecking, phases.availability]);
 
@@ -364,6 +370,43 @@ export default function Home() {
   useEffect(() => {
     return () => stopSearch({ keepPhase: true });
   }, []);
+
+  const handleMapMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
+    panStateRef.current = {
+      dragging: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: mapPan.x,
+      origY: mapPan.y,
+    };
+    setIsPanning(true);
+  };
+
+  const handleMapMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!panStateRef.current.dragging) return;
+    const dx = e.clientX - panStateRef.current.startX;
+    const dy = e.clientY - panStateRef.current.startY;
+    setMapPan({ x: panStateRef.current.origX + dx, y: panStateRef.current.origY + dy });
+  };
+
+  const handleMapMouseUp = () => {
+    panStateRef.current.dragging = false;
+    setIsPanning(false);
+  };
+
+  const handleMapDoubleClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    const currentScale = mapZoom;
+    const svgPointX = (clickX - mapPan.x) / currentScale;
+    const svgPointY = (clickY - mapPan.y) / currentScale;
+    const nextScale = Math.min(3, mapZoom + 0.25);
+    const newPanX = rect.width / 2 - svgPointX * nextScale;
+    const newPanY = rect.height / 2 - svgPointY * nextScale;
+    setMapZoom(nextScale);
+    setMapPan({ x: newPanX, y: newPanY });
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -569,6 +612,11 @@ export default function Home() {
     const nodes: any[] = [...identities, ...unknownRoots, ...profileNodes];
     return { nodes, edges };
   }, [deepProfiles, foundFromResults, username, email, connectBy]);
+
+  useEffect(() => {
+    setMapPan({ x: 0, y: 0 });
+    setMapZoom(1);
+  }, [mindMapData.nodes.length, mindMapData.edges.length]);
 
   const identityProfilesMap = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -841,7 +889,10 @@ export default function Home() {
     setActiveProfile(p);
   };
 
-  const closeProfileModal = () => setActiveProfile(null);
+  const closeProfileModal = () => {
+    setActiveProfile(null);
+    setActiveBranch(null);
+  };
 
   return (
     <div className="min-h-screen text-white px-4 pt-12 pb-0 flex flex-col" style={{ backgroundColor: palette.bg, position: "relative" }}>
@@ -1133,7 +1184,7 @@ export default function Home() {
             });
             const unlinkedProfiles = profileNodes.filter((p) => !linkedProfileIds.has(p.id));
 
-            const clusters = identities.map((id) => ({ id: id.id, label: (id as any).label || id.id, profiles: identityProfilesMap[id.id] || [], kind: "identity" as const }));
+            const clusters = identities.map((id) => ({ id: id.id, label: (id as any).label || id.id, profiles: identityProfilesMap[id.id] || [], kind: "identity" as const, source: (id as any).source }));
             if (unlinkedProfiles.length) clusters.push({ id: "unlinked", label: "Unlinked profiles", profiles: unlinkedProfiles as any[], kind: "unknown" as const });
 
             const ringSize = 8; // profiles per ring (smaller rings reduce overlap)
@@ -1164,10 +1215,30 @@ export default function Home() {
               };
             });
 
+            const describeBranchBasis = (cluster: any) => {
+              if (cluster.kind !== "identity") {
+                return { type: "unlinked", value: cluster.label || "Unlinked", note: "No direct match; grouped for layout only." };
+              }
+
+              if (cluster.source === "username") {
+                return { type: "username", value: cluster.label, note: `Shared username “${cluster.label}” from the search handle.` };
+              }
+
+              if (cluster.source === "email") {
+                return { type: "email", value: cluster.label, note: `Shared email “${cluster.label}” extracted from profile metadata.` };
+              }
+
+              if (cluster.source === "profile") {
+                return { type: "display name", value: cluster.label, note: `Matching display name “${cluster.label}”.` };
+              }
+
+              return { type: "identity", value: cluster.label, note: `Linked via identity “${cluster.label}”.` };
+            };
+
             return (
               <div className="p-4 rounded-lg border space-y-3" style={{ backgroundColor: palette.panel, borderColor: palette.border }}>
                 <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div className="text-sm" style={{ color: palette.light }}>Mind map: separate radial stars per identity; links only when data matches.</div>
+                  <div className="text-sm" style={{ color: palette.light }}>Mind map: drag to pan, double-click to zoom; separate radial stars per identity; links only when data matches.</div>
                   <div className="flex items-center gap-3 text-xs" style={{ color: palette.light }}>
                     <span>
                       {profileNodes.length} profiles • {identities.length} identities
@@ -1177,7 +1248,7 @@ export default function Home() {
                       <input
                         type="range"
                         min="0.7"
-                        max="1.6"
+                        max="3"
                         step="0.1"
                         value={mapZoom}
                         onChange={(e) => setMapZoom(parseFloat(e.target.value))}
@@ -1208,6 +1279,26 @@ export default function Home() {
                         </label>
                       ))}
                     </div>
+                    <div className="flex items-center gap-2">
+                      <span>Branch view</span>
+                      {([
+                        { value: "all", label: "view all" },
+                        { value: "single-pack", label: "pack single" },
+                        { value: "sorted", label: "sorted slots" },
+                      ] as const).map((opt) => (
+                        <label key={opt.value} className="flex items-center gap-1">
+                          <input
+                            type="radio"
+                            name="branchMode"
+                            value={opt.value}
+                            checked={branchMode === opt.value}
+                            onChange={() => setBranchMode(opt.value)}
+                            className="accent-slate-300"
+                          />
+                          <span>{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -1215,22 +1306,37 @@ export default function Home() {
                   <svg
                     viewBox={`0 0 ${svgWidth} ${svgHeight}`}
                     className="w-full"
-                    style={{ transform: `scale(${mapZoom})`, transformOrigin: "center", minHeight: `${Math.max(800, svgHeight)}px` }}
+                    style={{ height: "70vh", minHeight: "620px", maxHeight: "900px", userSelect: "none", cursor: isPanning ? "grabbing" : "grab" }}
+                    onMouseDown={handleMapMouseDown}
+                    onMouseMove={handleMapMouseMove}
+                    onMouseUp={handleMapMouseUp}
+                    onMouseLeave={handleMapMouseUp}
+                    onDoubleClick={handleMapDoubleClick}
                   >
+                    <g transform={`translate(${mapPan.x} ${mapPan.y}) scale(${mapZoom})`}>
                     {clusterCenters.map((cluster) => {
                       const profiles = cluster.profiles;
                       const getRingRadius = (ringIndex: number) => baseRadius + ringIndex * ringGap;
 
-                      const positions = profiles.map((p, idx) => {
+                      const angleStep = (Math.PI * 2) / ringSize;
+
+                      const sortedProfiles = branchMode === "sorted"
+                        ? [...profiles].sort((a, b) => {
+                            const catA = (a.category || "").toLowerCase();
+                            const catB = (b.category || "").toLowerCase();
+                            if (catA !== catB) return catA.localeCompare(catB);
+                            return (a.label || a.id || "").localeCompare(b.label || b.id || "");
+                          })
+                        : profiles;
+
+                      const positions = sortedProfiles.map((p, idx) => {
                         const ringIndex = Math.floor(idx / ringSize);
-                        const ringStart = ringIndex * ringSize;
-                        const itemsInRing = Math.min(ringSize, profiles.length - ringStart);
-                        const angleStep = (Math.PI * 2) / itemsInRing;
-                        const angle = -Math.PI / 2 + (idx - ringStart) * angleStep;
+                        const slotIndex = idx % ringSize;
+                        const angle = -Math.PI / 2 + slotIndex * angleStep;
                         const radius = getRingRadius(ringIndex);
                         const x = cluster.cx + radius * Math.cos(angle);
                         const y = cluster.cy + radius * Math.sin(angle);
-                        return { ...p, x, y };
+                        return { ...p, x, y, angle, radius, slotIndex, ringIndex };
                       });
 
                       const clipId = `avatar-clip-${cluster.id}`;
@@ -1273,6 +1379,33 @@ export default function Home() {
                                     category: p.category,
                                   };
                                   openProfileModal(modalProfile as any);
+
+                                  let lineNodes = positions;
+
+                                  if (branchMode === "all") {
+                                    lineNodes = positions;
+                                  } else if (branchMode === "single-pack") {
+                                    lineNodes = positions;
+                                  } else {
+                                    const clickedSlot = p.slotIndex;
+                                    lineNodes = positions.filter((pos) => pos.slotIndex === clickedSlot).sort((a, b) => a.radius - b.radius);
+                                  }
+
+                                  const mapPosToProfile = (node: any): DeepProfileResult => {
+                                    const match = deepProfiles.find((dp) => dp.platform === node.id);
+                                    if (match) return match;
+                                    return {
+                                      platform: node.id,
+                                      url: node.url || getPlatformUrl(node.id, username || ""),
+                                      displayName: node.label || node.id,
+                                      bio: node.bio || "",
+                                      avatar: node.avatar || fallbackAvatar(node.label || node.id),
+                                      category: node.category,
+                                    } as DeepProfileResult;
+                                  };
+
+                                  const branchProfiles = lineNodes.map(mapPosToProfile);
+                                  setActiveBranch({ label: cluster.label, nodes: branchProfiles, basis: describeBranchBasis(cluster) });
                                 }}
                                 style={{ cursor: "pointer" }}
                               />
@@ -1286,6 +1419,7 @@ export default function Home() {
                         </g>
                       );
                     })}
+                    </g>
                   </svg>
                 </div>
 
@@ -1497,8 +1631,8 @@ export default function Home() {
       {activeProfile && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center px-4 z-50" onClick={closeProfileModal}>
           <div
-            className="w-full max-w-lg rounded-xl shadow-2xl p-6 relative"
-            style={{ backgroundColor: palette.panel, border: `1px solid ${palette.border}` }}
+            className="w-full max-w-6xl rounded-xl shadow-2xl p-7 relative"
+            style={{ backgroundColor: palette.panel, border: `1px solid ${palette.border}`, width: "min(1200px, 96vw)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -1509,18 +1643,51 @@ export default function Home() {
               <X className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-3 mb-3">
-              <img src={activeProfile.avatar} alt={`${activeProfile.platform} avatar`} className="w-14 h-14 rounded-full" style={{ backgroundColor: palette.bg }} />
+              <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: palette.panelDark, border: `1px solid ${palette.border}` }}>
+                <Image src={logo} alt="deepkrak3n logo" className="rounded-full" style={{ width: 44, height: 44 }} />
+              </div>
               <div>
-                <a href={activeProfile.url} className="text-lg font-semibold hover:underline" target="_blank" rel="noreferrer" style={{ color: palette.light }}>
-                  {activeProfile.displayName}
-                </a>
+                <div className="text-lg font-semibold" style={{ color: palette.light }}>deepkrak3n</div>
                 <div className="text-sm" style={{ color: palette.light }}>
-                  {activeProfile.platform}
+                  {connectBy === "email" ? "MindMap search based on email" : "MindMap search based on username"}
                 </div>
               </div>
             </div>
-            <div className="text-sm whitespace-pre-wrap mb-3" style={{ color: palette.light }}>{activeProfile.bio}</div>
-            <div className="text-xs" style={{ color: palette.light }}>Category: {activeProfile.category || "Other"}</div>
+
+            <div className="text-sm whitespace-pre-wrap mb-3" style={{ color: palette.light }}>
+              {(() => {
+                if (activeBranch?.basis) {
+                  const { type, value, note } = activeBranch.basis;
+                  return `This branch exists because the profiles share ${type} “${value}”. ${note}`;
+                }
+                if (connectBy === "email" && email) return `This branch groups profiles that matched the searched email “${email}”.`;
+                if (connectBy === "profile") return "This branch connects profiles that reuse the same display name across platforms.";
+                return "This branch connects profiles that reuse the searched username across platforms.";
+              })()}
+            </div>
+            <div className="text-xs" style={{ color: palette.light }}>Branch anchor: {activeBranch?.basis?.value || (connectBy === "email" ? email || "email pivot" : username || "username pivot")}</div>
+
+            {activeBranch && (
+              <div className="mt-4 space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {activeBranch.nodes.map((node, idx) => (
+                    <div
+                      key={`${activeBranch.label}-${node.platform}-${idx}`}
+                      className="p-5 rounded-2xl border flex items-start gap-4"
+                      style={{ backgroundColor: palette.panelDark, borderColor: palette.border, minHeight: 180 }}
+                    >
+                      <img src={node.avatar} alt={`${node.platform} avatar`} className="w-14 h-14 rounded-full" style={{ backgroundColor: palette.bg }} />
+                      <div className="min-w-0 space-y-1">
+                        <div className="font-semibold text-base leading-tight" style={{ color: palette.light }}>{node.displayName}</div>
+                        <div className="text-sm" style={{ color: palette.light }}>{node.platform}</div>
+                        {node.category && <div className="text-xs text-gray-400">{node.category}</div>}
+                        {node.bio && <div className="text-sm text-gray-300 mt-1 leading-snug line-clamp-4">{node.bio}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
